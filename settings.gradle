@@ -1,0 +1,2 @@
+// プロジェクト名の定義(Spec.md §2 のリポジトリ構成に合わせる)
+rootProject.name = 'kakeibo-tutorial'

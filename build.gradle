@@ -1,0 +1,45 @@
+// 家計簿アプリ(学習教材)のビルド設定
+// 外部依存は H2 Database と JUnit 5 のみ(Spec.md §3)
+plugins {
+    id 'java'
+    // application プラグイン: ./gradlew run でアプリを起動できるようにする
+    id 'application'
+}
+
+group = 'com.example'
+version = '1.0.0'
+
+java {
+    toolchain {
+        // Java 21 (LTS) を使用する
+        languageVersion = JavaLanguageVersion.of(21)
+    }
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    // H2 Database(組み込み・ファイルモードで使用)
+    implementation 'com.h2database:h2:2.3.232'
+
+    // JUnit 5(テストフレームワーク)
+    testImplementation platform('org.junit:junit-bom:5.10.2')
+    testImplementation 'org.junit.jupiter:junit-jupiter'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+
+application {
+    // エントリポイント
+    mainClass = 'com.example.kakeibo.Main'
+}
+
+tasks.withType(JavaCompile).configureEach {
+    // ソースコードは日本語コメントを含むため UTF-8 を明示する
+    options.encoding = 'UTF-8'
+}
+
+test {
+    useJUnitPlatform()
+}

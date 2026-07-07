@@ -1,0 +1,15 @@
+# ビルド成果物
+build/
+.gradle/
+
+# 実行時に生成されるH2データベースファイル(Spec.md §2)
+data/
+
+# IDEの設定ファイル
+.idea/
+*.iml
+.vscode/
+bin/
+.settings/
+.classpath
+.project
