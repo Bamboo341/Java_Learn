@@ -45,3 +45,14 @@ tasks.withType(JavaCompile).configureEach {
 test {
     useJUnitPlatform()
 }
+
+// 演習用: H2のSQLシェルを起動してアプリのデータベースに接続する
+// 使い方は docs/04_大量データ投入.md を参照(アプリを終了してから実行すること)
+tasks.register('dbShell', JavaExec) {
+    group = 'kakeibo'
+    description = 'H2のSQLシェルでアプリのDB(./data/kakeibo)に接続する'
+    classpath = sourceSets.main.runtimeClasspath
+    mainClass = 'org.h2.tools.Shell'
+    args '-url', 'jdbc:h2:./data/kakeibo', '-user', '', '-password', ''
+    standardInput = System.in
+}
