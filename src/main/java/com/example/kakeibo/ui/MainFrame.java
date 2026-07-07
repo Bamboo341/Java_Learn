@@ -159,8 +159,13 @@ public class MainFrame extends JFrame {
     }
 
     private void onRegister() {
-        // TransactionDialogはステージ6で実装する
-        showNotImplemented();
+        TransactionDialog dialog = new TransactionDialog(this, transactionService,
+                categoryService, null);
+        dialog.setVisible(true);  // モーダルなので、閉じられるまでここで待つ
+        if (dialog.isSaved()) {
+            refreshFilterChoices();  // 新しい月の取引が増えた場合に備えて選択肢も更新する
+            reloadTransactions();
+        }
     }
 
     private void onEdit() {
@@ -169,8 +174,14 @@ public class MainFrame extends JFrame {
             JOptionPane.showMessageDialog(this, "編集する取引を選択してください");
             return;
         }
-        // TransactionDialogはステージ6で実装する
-        showNotImplemented();
+        TransactionDialog dialog = new TransactionDialog(this, transactionService,
+                categoryService, selected);
+        dialog.setVisible(true);
+        if (dialog.isSaved()) {
+            // 編集結果を画面に反映するため、一覧を読み直す
+            refreshFilterChoices();
+            reloadTransactions();
+        }
     }
 
     private void onDelete() {
@@ -194,18 +205,14 @@ public class MainFrame extends JFrame {
     }
 
     private void onOpenCategoryDialog() {
-        // CategoryDialogはステージ6で実装する
-        showNotImplemented();
+        new CategoryDialog(this, categoryService).setVisible(true);
+        // カテゴリの追加・名称変更・削除が一覧やフィルタに反映されるよう読み直す
+        refreshFilterChoices();
+        reloadTransactions();
     }
 
     private void onOpenSummaryDialog() {
-        // SummaryDialogはステージ6で実装する
-        showNotImplemented();
-    }
-
-    private void showNotImplemented() {
-        JOptionPane.showMessageDialog(this, "この機能は次のステージで実装します", "未実装",
-                JOptionPane.INFORMATION_MESSAGE);
+        new SummaryDialog(this, transactionService).setVisible(true);
     }
 
     // ---------- データの読み込みと画面反映 ----------
