@@ -33,6 +33,8 @@ dependencies {
 application {
     // エントリポイント
     mainClass = 'com.example.kakeibo.Main'
+    // 日本語のログがコンソールで文字化けしないよう、出力エンコーディングを固定する
+    applicationDefaultJvmArgs = ['-Dstdout.encoding=UTF-8', '-Dstderr.encoding=UTF-8']
 }
 
 tasks.withType(JavaCompile).configureEach {
