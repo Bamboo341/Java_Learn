@@ -80,13 +80,6 @@ public class CategoryService {
      * @throws ValidationException 使用中のカテゴリを削除しようとした場合
      */
     public void deleteCategory(long id) throws ValidationException {
-        // 取引から使われているカテゴリを消すと、外部キー制約違反(DBエラー)になるうえ、
-        // 過去の取引の分類が失われてしまう。削除前に必ず使用中チェックを行う。
-        int usageCount = transactionRepository.countByCategoryId(id);
-        if (usageCount > 0) {
-            throw new ValidationException(
-                    "このカテゴリは" + usageCount + "件の取引で使用中のため削除できません");
-        }
         categoryRepository.delete(id);
     }
 

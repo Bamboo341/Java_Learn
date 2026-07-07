@@ -6,9 +6,12 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.time.LocalDate;
 import java.time.YearMonth;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 import com.example.kakeibo.exception.DataAccessException;
@@ -170,52 +173,48 @@ public class JdbcTransactionRepository implements TransactionRepository {
 
     @Override
     public MonthlySummary summarizeMonth(YearMonth yearMonth) {
-        // 集計はJavaのループではなくSQL(GROUP BY)で行う。
-        // 全件をメモリに読み込む必要がなく、データが増えても性能が落ちにくい。
-        Date firstDay = Date.valueOf(yearMonth.atDay(1));
-        Date lastDay = Date.valueOf(yearMonth.atEndOfMonth());
+        // 全取引を読み込み、Java側で対象月を集計する
+        LocalDate firstDay = yearMonth.atDay(1);
+        LocalDate lastDay = yearMonth.atEndOfMonth();
+        List<Transaction> all = findByConditions(null, null, null);
 
-        String totalsSql = "SELECT type, SUM(amount) AS total FROM transactions"
-                + " WHERE transaction_date >= ? AND transaction_date <= ?"
-                + " GROUP BY type";
-        String categorySql = "SELECT c.name, SUM(t.amount) AS total"
-                + " FROM transactions t JOIN categories c ON t.category_id = c.id"
-                + " WHERE t.type = ? AND t.transaction_date >= ? AND t.transaction_date <= ?"
-                + " GROUP BY c.name ORDER BY total DESC";  // 支出の大きいカテゴリが上に来るように
-
-        try (Connection conn = databaseManager.getConnection()) {
-            int incomeTotal = 0;
-            int expenseTotal = 0;
-            try (PreparedStatement ps = conn.prepareStatement(totalsSql)) {
-                ps.setDate(1, firstDay);
-                ps.setDate(2, lastDay);
-                try (ResultSet rs = ps.executeQuery()) {
-                    while (rs.next()) {
-                        TransactionType type = TransactionType.fromDbValue(rs.getString("type"));
-                        if (type == TransactionType.INCOME) {
-                            incomeTotal = rs.getInt("total");
-                        } else {
-                            expenseTotal = rs.getInt("total");
-                        }
-                    }
-                }
+        int incomeTotal = 0;
+        int expenseTotal = 0;
+        Map<String, Integer> expenseByCategory = new LinkedHashMap<>();
+        for (Transaction transaction : all) {
+            String categoryName = findCategoryName(transaction.getCategoryId());
+            // 対象月(月初以上・月末未満)の取引だけを集計する
+            if (transaction.getDate().isBefore(firstDay) || !transaction.getDate().isBefore(lastDay)) {
+                continue;
             }
-
-            List<CategoryExpense> categoryExpenses = new ArrayList<>();
-            try (PreparedStatement ps = conn.prepareStatement(categorySql)) {
-                ps.setString(1, TransactionType.EXPENSE.toDbValue());
-                ps.setDate(2, firstDay);
-                ps.setDate(3, lastDay);
-                try (ResultSet rs = ps.executeQuery()) {
-                    while (rs.next()) {
-                        categoryExpenses.add(new CategoryExpense(rs.getString("name"), rs.getInt("total")));
-                    }
-                }
+            if (transaction.getType() == TransactionType.INCOME) {
+                incomeTotal += transaction.getAmount();
+            } else {
+                expenseTotal += transaction.getAmount();
+                expenseByCategory.merge(categoryName, transaction.getAmount(), Integer::sum);
             }
+        }
 
-            return new MonthlySummary(yearMonth, incomeTotal, expenseTotal, categoryExpenses);
+        List<CategoryExpense> categoryExpenses = new ArrayList<>();
+        for (Map.Entry<String, Integer> entry : expenseByCategory.entrySet()) {
+            categoryExpenses.add(new CategoryExpense(entry.getKey(), entry.getValue()));
+        }
+        categoryExpenses.sort((a, b) -> b.getAmount() - a.getAmount());  // 支出の大きい順
+        return new MonthlySummary(yearMonth, incomeTotal, expenseTotal, categoryExpenses);
+    }
+
+    /** カテゴリ名を1件取得する。 */
+    private String findCategoryName(long categoryId) {
+        String sql = "SELECT name FROM categories WHERE id = ?";
+        try (Connection conn = databaseManager.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setLong(1, categoryId);
+            try (ResultSet rs = ps.executeQuery()) {
+                rs.next();
+                return rs.getString("name");
+            }
         } catch (SQLException e) {
-            throw new DataAccessException("月次集計に失敗しました (" + yearMonth + ")", e);
+            throw new DataAccessException("カテゴリ名の取得に失敗しました", e);
         }
     }
 

@@ -236,13 +236,7 @@ public class TransactionDialog extends JDialog {
         if (text == null || text.trim().isEmpty()) {
             throw new ValidationException("金額を入力してください");
         }
-        // 「1,000」のような桁区切りカンマ付きの入力も受け付けられるよう、先に取り除く
-        String normalized = text.trim().replace(",", "");
-        // 数字だけになったことを確かめてから変換する(想定外の文字での例外を防ぐ)
-        if (!normalized.matches("\\d+")) {
-            throw new ValidationException("金額は半角数字で入力してください");
-        }
-        return Integer.parseInt(normalized);
+        return Integer.parseInt(text.trim());
     }
 
     /** カテゴリコンボの1項目。 */

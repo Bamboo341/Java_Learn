@@ -177,11 +177,6 @@ public class MainFrame extends JFrame {
         TransactionDialog dialog = new TransactionDialog(this, transactionService,
                 categoryService, selected);
         dialog.setVisible(true);
-        if (dialog.isSaved()) {
-            // 編集結果を画面に反映するため、一覧を読み直す
-            refreshFilterChoices();
-            reloadTransactions();
-        }
     }
 
     private void onDelete() {

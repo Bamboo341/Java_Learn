@@ -17,7 +17,6 @@ import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JTable;
-import javax.swing.SwingWorker;
 import javax.swing.table.DefaultTableModel;
 
 import com.example.kakeibo.model.CategoryExpense;
@@ -122,37 +121,14 @@ public class SummaryDialog extends JDialog {
 
     /** 指定した年月の集計を読み込み、画面に反映する。 */
     private void loadSummary(YearMonth month) {
-        // 読み込み中であることが分かるように表示を切り替えておく
-        incomeLabel.setText("集計中...");
-        expenseLabel.setText("集計中...");
-        balanceLabel.setText("集計中...");
-        balanceLabel.setForeground(Color.BLACK);
-        breakdownModel.setRowCount(0);
-
-        // [設計意図] 集計はSwingWorkerでバックグラウンド実行する。Swingの描画や
-        // ボタン操作はEDT(イベントディスパッチスレッド)という1本のスレッドが
-        // 処理しているため、EDT上で時間のかかる処理をすると画面全体が固まる。
-        // SwingWorkerを使うと、doInBackgroundは別スレッドで、done(画面更新)は
-        // EDTで実行され、「重い処理は裏で・画面更新は表で」を安全に実現できる。
-        SwingWorker<MonthlySummary, Void> worker = new SwingWorker<>() {
-            @Override
-            protected MonthlySummary doInBackground() {
-                return transactionService.summarizeMonth(month);
-            }
-
-            @Override
-            protected void done() {
-                try {
-                    showSummary(get());
-                } catch (Exception e) {
-                    logger.log(Level.SEVERE, "月次集計の取得に失敗", e);
-                    JOptionPane.showMessageDialog(SummaryDialog.this,
-                            "集計中にエラーが発生しました。\n" + e.getMessage(),
-                            "エラー", JOptionPane.ERROR_MESSAGE);
-                }
-            }
-        };
-        worker.execute();
+        try {
+            showSummary(transactionService.summarizeMonth(month));
+        } catch (Exception e) {
+            logger.log(Level.SEVERE, "月次集計の取得に失敗", e);
+            JOptionPane.showMessageDialog(this,
+                    "集計中にエラーが発生しました。\n" + e.getMessage(),
+                    "エラー", JOptionPane.ERROR_MESSAGE);
+        }
     }
 
     /** 集計結果を画面に反映する。 */
